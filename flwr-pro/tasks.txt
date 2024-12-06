@@ -1,0 +1,19 @@
+# Feature and target columns for each task --- To be implemented
+tasks = {
+    "BMI Categorization": {
+        "features": ['Age', 'Gender', 'Duration'],
+        "target": 'BMI Category'
+    },
+    "Exercise Intensity": {
+        "features": ['Dream Weight', 'Actual Weight', 'Heart Rate', 'Duration', 'BMI'],
+        "target": 'Exercise Intensity'
+    },
+    "Exercise Type": {
+        "features": ['Calories Burn', 'Duration', 'BMI', 'Heart Rate', 'Age', 'Gender'],
+        "target": 'Exercise'
+    },
+    "Calories Burn": {
+        "features": ['Dream Weight', 'Actual Weight', 'Age', 'Gender', 'Duration', 'Heart Rate', 'BMI', 'Exercise Intensity'],
+        "target": 'Calories Burn'
+    }
+}

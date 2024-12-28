@@ -1,0 +1,6 @@
+flwr
+shap
+lime
+scikit-surprise
+numpy<2.0
+recommenders

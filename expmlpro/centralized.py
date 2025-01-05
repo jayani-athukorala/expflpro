@@ -5,19 +5,15 @@ import json
 import sys
 
 # Importing data preprocessing, recommendation generation, and explanation functions from expflpro
-from expflpro.dataset import (
-    preprocess_data, 
-    generate_interactions_data, 
-    prepare_collaborative_data, 
-    build_user_item_matrix,
-    get_features,
-)
-from expflpro.explainer import (
+from expflpro.dataset import prepare_data
+from expflpro.model import load_model
+from expflpro.explainer import(
     generate_lime_explanations, generate_lime_explanations_for_all, 
-    generate_shap_explanations, generate_shap_explanations_for_all,
-)
-from expflpro.result import save_evaluation_metrics, save_list_as_json
-from expflpro.task import load_model, train, evaluate, calculate_evaluation_metrics, recommend, recommend_for_all
+    generate_shap_explanations, generate_shap_explanations_for_all
+ )
+from expflpro.results import reset_results_folder, save_evaluation_metrics, save_list_as_csv, save_list_as_json
+# from expflpro.result import save_evaluation_metrics, save_list_as_json, save_dict_as_csv, reset_results_folder
+from expflpro.task import generate_evaluation_metrics, recommend_exercise_plans, recommend_exercise_plans_for_all
 
 
 # Main script to orchestrate the centralized recommendation system
@@ -27,80 +23,81 @@ def main():
     This script includes data preprocessing, model training, evaluation, recommendation generation,
     and explainability using LIME and SHAP.
     """
-    
-    # Step 1: Load and preprocess the dataset
+    # Reset results folder to start with a clean slate
+    print("Resetting results folder...")
+    reset_results_folder("../results/ml")
+
+    # Load and prepare the dataset
     print("Loading dataset...")
-    data = pd.read_csv('../data/exercise_dataset.csv')  # Load the raw dataset
+    data = pd.read_csv('../data/exercise_recommendation_dataset.csv')  # Load the raw dataset
     
-    print("Preprocessing data...")
-    processed_data, mappings = preprocess_data(data)  # Preprocess raw data and create mappings
-    
-    # Step 2: Generate interaction data for collaborative filtering
-    print("Generating user-workout interaction data...")
-    interaction_data = generate_interactions_data(processed_data)  # User-workout interaction matrix
-    
-    print("Preparing collaborative filtering datasets...")
-    trainset, testset, explainset = prepare_collaborative_data(interaction_data)  # Split data into train/test sets
-    
-    # Step 3: Build user-item matrix and extract features
-    print("Generating user and workout features...")
-    user_features, workout_features = get_features(processed_data)  # Extract features for users and workouts
-    
-    print("Building user-item matrix...")
-    user_item_matrix = build_user_item_matrix(interaction_data)  # Matrix for recommendation generation
+    print("Prepare data...")
+    X_train, X_test, X_explain, y_train, y_test, y_explain = prepare_data(data)
 
-    # Step 4: Load, train, and evaluate the recommendation model
-    print("Loading recommendation model...")
-    model = load_model()  # Load a Surprise SVD model
-    
-    print("Training model...")
-    model = train(model, trainset)  # Train the model with the training dataset
 
-    print("Evaluating model...")
-    metrics = evaluate(model, testset, user_item_matrix)  # Evaluate the model on the test dataset
+    # Build and train model
+    model = load_model(input_shape=X_train.shape[1], num_classes=y_train.nunique())
+    # Train the model
+    model.fit({'User_Features': X_train}, y_train, validation_data=({'User_Features': X_test}, y_test), epochs=20, batch_size=64)
+
+    # Evaluate the model
+    loss, accuracy = model.evaluate({'User_Features': X_test}, y_test, verbose=0)
+    print(f"Test Accuracy: {accuracy:.2f}")
+
+    # Get predicted probabilities
+    y_proba = model.predict({'User_Features': X_test}, batch_size=64)
+
+    # Convert probabilities to predicted class labels
+    y_pred = np.argmax(y_proba, axis=1)
+
+    # Compute metrics
+    metrics = generate_evaluation_metrics(y_test, y_pred, y_proba=y_proba, loss=loss)
     print("Evaluation Metrics on Test Data:", json.dumps(metrics, indent=4))  # Print metrics in a readable format
     
     # Save evaluation metrics to a results folder
     print("Saving evaluation metrics...")
     save_evaluation_metrics(metrics)  # Save metrics as a JSON file in a centralized location
 
-    # Step 5: Generate recommendations for a random user
-    print("Generating recommendations for a random user...")
-    random_user_id = np.random.choice(explainset['user_id'].unique())  # Select a random user ID
-    recommended_workouts = recommend(random_user_id, model, mappings['workout_type'])  # Recommend top workouts
-    print(f"Top recommendations for random user {random_user_id}:", json.dumps(recommended_workouts, indent=4))
+    top_k = 1
+    # # Generate recommendations and explanations for all users in explain dataset
+    # print("Generating recommendations for all users...")
+    # recommendations_all = recommend_exercise_plans_for_all(model, X_explain, top_k)
+    # # print("recommendations", recommendations_all)
     
-    # Save recommendations for the random user
-    save_list_as_json(recommended_workouts, "../results/ml/recommendations/", f"recommended_workouts_for_{random_user_id}.json")
+    # save_list_as_csv(recommendations_all, "../results/ml/recommendations/", "workout_recommendations.csv")
 
-    # Step 6: Generate explainability using LIME for the random user
-    print("Generating LIME explanations for recommendations...")
-    lime_explanations = generate_lime_explanations(random_user_id, recommended_workouts, model, user_item_matrix)
-    print(f"LIME explanation for user {random_user_id}:", json.dumps(lime_explanations, indent=4))
+    # print("Generating LIME explanations for all users...")
+    # feature_names=X_explain.columns
+    # lime_explanations_all = generate_lime_explanations_for_all(model, X_explain, feature_names, top_k)
+    # # print("lime", lime_explanations_all)
+    # save_list_as_csv(lime_explanations_all, "../results/ml/explanations/lime/", "lime_explanations.csv")
     
-    # Save LIME explanations
-    save_list_as_json(lime_explanations, "../results/ml/explanations/lime", f"explanations_for_user_{random_user_id}_workouts.json")
+    # print("Generating SHAP explanations for all users...")
+    # shap_explanations_all = generate_shap_explanations_for_all(model, X_explain, top_k)
+    # # print("shap", shap_explanations_all)
+    # save_list_as_csv(shap_explanations_all, "../results/ml/explanations/shap/", "shap_explanations.csv")
 
-    # Step 7: Generate explainability using SHAP for the random user
-    print("Generating SHAP explanations for recommendations...")
-    shap_explanations = generate_shap_explanations(random_user_id, recommended_workouts, model, user_item_matrix)
-    print(f"SHAP explanation for user {random_user_id}:", json.dumps(shap_explanations, indent=4))
-    
+    # Personalized recommendations
+    # Select a random user
+    random_index = np.random.choice(len(X_explain))
+    random_user = X_explain.iloc[random_index:random_index+1]
+    # Select a random user and recommend exercise plans
+    recommendations = recommend_exercise_plans(X_explain, model, top_k)
+    print("Recommendations:", json.dumps(recommendations, indent=4))
     # Save SHAP explanations
-    save_list_as_json(shap_explanations, "../results/ml/explanations/shap", f"explanations_for_user_{random_user_id}_workouts.json")
+    save_list_as_json(recommendations, "../results/ml/recommendations", f"recommendations_for_user_{random_index}.json")
 
-    # Step 8: Generate recommendations and explanations for all users
-    print("Generating recommendations for all users...")
-    recommendations_all = recommend_for_all(model, explainset, mappings['workout_type'])
-    save_list_as_json(recommendations_all, "../results/ml/recommendations/", "workout_recommendations.json")
+    # Generate SHAP explanations
+    shap_explanations = generate_shap_explanations(model, X_train, random_user)
+    print("SHAP Explanations:", json.dumps(shap_explanations, indent=4))
+    # Save SHAP explanations
+    save_list_as_json(shap_explanations, "../results/ml/explanations/shap", f"explanations_for_user_{random_index}_recommendations.json")
 
-    print("Generating LIME explanations for all users...")
-    lime_explanations_all = generate_lime_explanations_for_all(model, explainset, user_item_matrix)
-    save_list_as_json(lime_explanations_all, "../results/ml/explanations/lime/", "lime_explanations.json")
-    
-    print("Generating SHAP explanations for all users...")
-    shap_explanations_all = generate_shap_explanations_for_all(model, explainset, user_item_matrix, top_n=2)
-    save_list_as_json(shap_explanations_all, "../results/ml/explanations/shap/", "shap_explanations.json")
+    # Generate LIME explanations
+    lime_explanations = generate_lime_explanations(model, X_train, random_user)
+    print("LIME Explanations:", json.dumps(lime_explanations, indent=4))
+    # Save SHAP explanations
+    save_list_as_json(lime_explanations, "../results/ml/explanations/lime", f"explanations_for_user_{random_index}_recommendations.json")
 
 
 # Run the script

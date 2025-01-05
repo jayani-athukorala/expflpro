@@ -1,36 +1,31 @@
-# Explainable Federated Learning Project
+# expflpro: A Flower / TensorFlow app
 
-This project implements personalized explainable federated learning for fitness data. Below is the structure of the project and instructions on how to set up the environment.
+## Install dependencies and project
 
-## Project Structure
-
-To be completed ------------------
-
-## Setting Up the Environment
-
-### 1. Clone the Repository
-
-```sh
-git clone git@github.com:jayani-athukorala/exp-fed-pro.git
-```
-### 2. Install and activate conda environment
-```sh
-conda create -n fedenv python=3.10
-conda activate fedenv
-# conda list 
-# conda info --envs
-```
-### 3. Install Required Packages (Dependancies)
-
-```sh
-conda env export > environment.yml # Save environment configuration for reproducibility
-conda env create -f environment.yml # Recreate the environment
+```bash
+pip install -e .
 ```
 
+## Run with the Simulation Engine
 
-### 5. Deactivate the Environment
+In the `expflpro` directory, use `flwr run` to run a local simulation:
 
-```sh
-conda deactivate
+```bash
+flwr run .
 ```
 
+Refer to the [How to Run Simulations](https://flower.ai/docs/framework/how-to-run-simulations.html) guide in the documentation for advice on how to optimize your simulations.
+
+## Run with the Deployment Engine
+
+> \[!NOTE\]
+> An update to this example will show how to run this Flower application with the Deployment Engine and TLS certificates, or with Docker.
+
+## Resources
+
+- Flower website: [flower.ai](https://flower.ai/)
+- Check the documentation: [flower.ai/docs](https://flower.ai/docs/)
+- Give Flower a ⭐️ on GitHub: [GitHub](https://github.com/adap/flower)
+- Join the Flower community!
+  - [Flower Slack](https://flower.ai/join-slack/)
+  - [Flower Discuss](https://discuss.flower.ai/)

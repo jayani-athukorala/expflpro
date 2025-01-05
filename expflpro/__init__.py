@@ -1,1 +1,1 @@
-"""expflpro: A Flower / sklearn app."""
+"""expflpro: A Flower / TensorFlow app."""

@@ -1,172 +1,132 @@
-import os
-import numpy as np
-import json
-import lime
-from lime.lime_tabular import LimeTabularExplainer
 import shap
-import pandas as pd
-from expflpro.task import recommend_for_all
-import sys
+import numpy as np
+from lime.lime_tabular import LimeTabularExplainer
 
-def generate_lime_explanations(user_id, top_workouts, model, user_item_matrix, K=2):
+def generate_shap_explanations(model, X_train, user_features):
     """
-    Generate LIME explanations for an individual user's top recommended workouts.
+    Generate SHAP explanations for a random user.
 
-    Parameters:
-    - user_id (int/str): The user ID to generate explanations for.
-    - top_workouts (list): List of top recommended workouts [(workout, score)].
-    - model: Trained collaborative filtering model (Surprise SVD).
-    - user_item_matrix (DataFrame): User-item matrix with user preferences for features.
-    - K (int): Number of top features to use in the explanation.
+    Args:
+        model (tf.keras.Model): Trained model.
+        X_train (pd.DataFrame): Training dataset for SHAP initialization.
+        user_features (pd.DataFrame): Features of the selected user.
 
     Returns:
-    - explanations (list): List of dictionaries containing explanations for each recommendation.
+        dict: SHAP explanations as JSON.
     """
+    # Use a representative subset for the background
+    background_data = shap.sample(X_train, 100)
 
-    # Extract feature names from the user-item matrix for LIME
-    feature_names = list(user_item_matrix.columns)
+    explainer = shap.KernelExplainer(
+        lambda x: model.predict({'User_Features': x}),
+        background_data
+    )
+    shap_values = explainer.shap_values(user_features)[0]  # Extract for the first class
 
-    # Use the full user-item matrix as the training data for LIME explainer
-    lime_data = user_item_matrix.values
+    # Convert SHAP explanations to JSON
+    explanations = {
+        "expected_value": explainer.expected_value[0],
+        "shap_values": shap_values.tolist(),
+        "feature_values": user_features.iloc[0].to_dict()
+    }
+    return explanations
 
-    # Initialize the LIME explainer for regression tasks
-    explainer = LimeTabularExplainer(
-        training_data=lime_data,
-        feature_names=feature_names,
-        mode='regression'
+
+def generate_lime_explanations(model, X_train, user_features):
+    """
+    Generate LIME explanations for a random user.
+
+    Args:
+        model (tf.keras.Model): Trained model.
+        X_train (pd.DataFrame): Training dataset for LIME initialization.
+        user_features (pd.DataFrame): Features of the selected user.
+
+    Returns:
+        dict: LIME explanations as JSON.
+    """
+    # Use a subset of the training data
+    lime_explainer = LimeTabularExplainer(
+        training_data=X_train.sample(500).values,
+        feature_names=X_train.columns,
+        mode='classification'
     )
 
-    # Initialize a list to store explanations
-    explanations = []
+    # Explain the prediction for the random user
+    lime_exp = lime_explainer.explain_instance(
+        user_features.iloc[0].values,  # Single user input
+        lambda x: model.predict({'User_Features': x})
+    )
 
-    # Get the feature vector for the specific user
-    user_vector = user_item_matrix.loc[user_id].values.reshape(1, -1)
-
-    # Define a custom prediction function for LIME to predict user preferences
-    def predict_fn(x):
-        predictions = []
-        for instance in x:  # For each input sample
-            pred_scores = [
-                model.predict(user_id, feature_names[i]).est for i in range(len(feature_names))
-            ]
-            predictions.append(pred_scores)
-        return np.array(predictions)
-
-    # Generate LIME explanations for each recommended workout
-    for workout, score in top_workouts:
-        # LIME explanation for the current recommendation
-        exp = explainer.explain_instance(
-            data_row=user_vector[0],  # Feature vector of the user
-            predict_fn=predict_fn,   # Custom prediction function
-            num_features=K           # Limit to top K features
-        )
-        explanations.append({
-            "workout_type": workout,
-            "explanation": exp.as_list()  # List of feature contributions
-        })
-
-    return explanations
-
-def generate_lime_explanations_for_all(model, explainset, user_item_matrix, top_n=2):
-    """
-    Generate and save LIME explanations for all users' recommendations.
-
-    Parameters:
-    - model: Trained collaborative filtering model.
-    - explainset (DataFrame): Dataset containing user and workout relationships.
-    - user_item_matrix (DataFrame): User-item matrix for feature-based recommendations.
-    - top_n (int): Number of top recommendations to explain.
-
-    Returns:
-    - lime_explanations (dict): Dictionary with explanations for all users.
-    """
-
-    # Initialize a dictionary to store explanations for all users
-    lime_explanations = {}
-
-    # Map workout IDs to labels (or indices)
-    workout_mappings = [0, 1, 2, 3, 4, 5]
-
-    # Generate recommendations for all users
-    recommendations = recommend_for_all(model, explainset, workout_mappings, K=top_n)
-
-    # Generate LIME explanations for each user
-    for user_id, top_workouts in recommendations.items():
-        lime_explanations[user_id] = generate_lime_explanations(user_id, top_workouts, model, user_item_matrix, K=top_n)
-
+    # Convert LIME explanations to JSON
+    lime_explanations = {
+        "feature_importances": [
+            {"feature": imp[0], "importance": imp[1]}
+            for imp in lime_exp.as_list()
+        ],
+        "intercept": lime_exp.intercept
+    }
     return lime_explanations
 
-def generate_shap_explanations(user_id, top_workouts, model, user_item_matrix):
+def generate_shap_explanations_for_all(model, X_explain, k=1):
     """
-    Generate SHAP explanations for an individual user's top recommended workouts.
+    Generate SHAP explanations for all users in X_explain.
 
-    Parameters:
-    - user_id (int/str): The user ID to generate explanations for.
-    - top_workouts (list): Top recommendations for the user [(workout, score)].
-    - model: Trained collaborative filtering model.
-    - user_item_matrix (DataFrame): User-item matrix for recommendations.
+    Args:
+        model (tf.keras.Model): The trained model.
+        X_explain (pd.DataFrame): The dataset to explain.
+        k (int): Number of top classes to explain.
 
     Returns:
-    - explanations (list): List of dictionaries containing explanations for each recommendation.
+        List[Dict]: SHAP explanations for each user.
     """
+    explainer = shap.KernelExplainer(model.predict, X_explain.values)
+    shap_explanations = []
 
-    # Initialize a list to store explanations
-    explanations = []
+    for i, user_features in enumerate(X_explain.values):
+        shap_values = explainer.shap_values(np.expand_dims(user_features, axis=0))
+        user_explanations = {}
 
-    # Extract the user's feature vector
-    user_vector = user_item_matrix.loc[user_id].values.reshape(1, -1)
-
-    # Define a custom prediction function for SHAP
-    def predict_fn(x):
-        predictions = []
-        for instance in x:  # For each input sample
-            pred_scores = [
-                model.predict(user_id, user_item_matrix.columns[i]).est for i in range(len(user_item_matrix.columns))
-            ]
-            predictions.append(pred_scores)
-        return np.array(predictions)
-
-    # Initialize the SHAP explainer with the custom prediction function
-    explainer = shap.Explainer(predict_fn, user_item_matrix.values)
-
-    # Compute SHAP values for the user's feature vector
-    shap_values = explainer(user_vector)
-
-    # Add explanations for each recommended workout
-    for workout, score in top_workouts:
-        explanations.append({
-            "workout_type": workout,
-            "shap_values": shap_values.values[0].tolist(),  # SHAP values for the user's features
-            "feature_importance": shap_values.data[0].tolist()  # Corresponding feature values
-        })
-
-    return explanations
-
-def generate_shap_explanations_for_all(model, explainset, user_item_matrix, top_n=2):
-    """
-    Generate and save SHAP explanations for all users' recommendations.
-
-    Parameters:
-    - model: Trained collaborative filtering model.
-    - explainset (DataFrame): Dataset containing user and workout relationships.
-    - user_item_matrix (DataFrame): User-item matrix for content similarity.
-    - top_n (int): Number of top recommendations to explain.
-
-    Returns:
-    - shap_explanations (dict): Dictionary with SHAP explanations for all users.
-    """
-
-    # Initialize a dictionary to store SHAP explanations for all users
-    shap_explanations = {}
-
-    # Map workout IDs to labels (or indices)
-    workout_mappings = [0, 1, 2, 3, 4, 5]
-
-    # Generate recommendations for all users
-    recommendations = recommend_for_all(model, explainset, workout_mappings, K=top_n)
-
-    # Generate SHAP explanations for each user
-    for user_id, top_workouts in recommendations.items():
-        shap_explanations[user_id] = generate_shap_explanations(user_id, top_workouts, model, user_item_matrix)
-
+        for class_idx in range(k):  # Explain top K classes
+            user_explanations[f"Class {class_idx}"] = shap_values[class_idx].tolist()
+        
+        shap_explanations.append(user_explanations)
+    
     return shap_explanations
+
+from lime.lime_tabular import LimeTabularExplainer
+
+def generate_lime_explanations_for_all(model, X_explain, feature_names, k=1):
+    """
+    Generate LIME explanations for all users in X_explain.
+
+    Args:
+        model (tf.keras.Model): The trained model.
+        X_explain (pd.DataFrame): The dataset to explain.
+        feature_names (List[str]): Names of the features.
+        k (int): Number of top classes to explain.
+
+    Returns:
+        List[Dict]: LIME explanations for each user.
+    """
+    explainer = LimeTabularExplainer(
+        X_explain.values,
+        feature_names=feature_names,
+        class_names=[str(i) for i in range(model.output_shape[-1])],
+        mode='classification'
+    )
+    lime_explanations = []
+
+    for i, user_features in enumerate(X_explain.values):
+        explanation = explainer.explain_instance(
+            user_features,
+            model.predict,
+            num_features=len(feature_names),
+            top_labels=k
+        )
+        user_explanations = {
+            label: explanation.as_list(label) for label in explanation.top_labels
+        }
+        lime_explanations.append(user_explanations)
+    
+    return lime_explanations
+

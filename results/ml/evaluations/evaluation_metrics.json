@@ -1,11 +1,11 @@
 {
-    "Accuracy": 0.822,
-    "Precision": 0.7982883151120218,
-    "Recall": 0.822,
-    "F1-Score": 0.8083269503703467,
-    "ROC-AUC": 0.9786587904098577,
-    "Log-Loss": 0.4496674398977616,
-    "Matthews-Correlation-Coefficient": 0.7746222886060132,
-    "Cohen-Kappa-Score": 0.7734659957187618,
-    "Loss": 0.44966748356819153
+    "Accuracy": 0.826,
+    "Precision": 0.8091897737977357,
+    "Recall": 0.826,
+    "F1-Score": 0.8124907769497245,
+    "ROC-AUC": 0.9789681640572997,
+    "Log-Loss": 0.44614437003270974,
+    "Matthews-Correlation-Coefficient": 0.7811498509742232,
+    "Cohen-Kappa-Score": 0.7787610619469026,
+    "Loss": 0.44614434242248535
 }

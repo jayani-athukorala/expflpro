@@ -4,19 +4,21 @@ from flwr.client import NumPyClient, ClientApp
 from flwr.common import Context
 from expflpro.dataset import load_data
 from expflpro.model import load_model
-from expflpro.task import generate_evaluation_metrics, recommend_exercise_plans
+from expflpro.task import generate_evaluation_metrics, generate_recommendations_with_explanations
 from expflpro.results import save_local_evaluations
+from expflpro.graph import generate_recommendation_graphs
 import numpy as np
 
 # Define Flower Client and client_fn
 class FlowerClient(NumPyClient):
     def __init__(
-        self, model, X_train, X_test, X_explain, y_train, y_test, y_explain,
-        partition_id, epochs, batch_size, verbose
+        self, model, X_train, X_test, X_explain, y_train, y_test, y_explain, mappings,
+        partition_id, num_server_rounds, epochs, batch_size, verbose
     ):
         self.model = model
-        self.X_train, self.X_test, self.X_explain, self.y_train, self.y_test, self.y_explain = X_train, X_test, X_explain, y_train, y_test, y_explain
+        self.X_train, self.X_test, self.X_explain, self.y_train, self.y_test, self.y_explain, self.mappings = X_train, X_test, X_explain, y_train, y_test, y_explain, mappings
         self.partition_id = partition_id
+        self.num_server_rounds = num_server_rounds
         self.epochs = epochs
         self.batch_size = batch_size
         self.verbose = verbose
@@ -51,15 +53,44 @@ class FlowerClient(NumPyClient):
         metrics = generate_evaluation_metrics(self.y_test, y_pred, y_proba_filtered, loss)
 
         save_local_evaluations(metrics, config["current_round"], self.partition_id)
+
+        # At the final round after the model evaluations generate local recommendations with explanations
+        if(config["current_round"] == self.num_server_rounds):
+            recommendations, user_index = self.generate_local_recommendations_with_explanations()
+            output_folder = f"results/fl/client_{self.partition_id}/explanations"
+
+            generate_recommendation_graphs(recommendations, output_folder, user_index)
+            
+
         return loss, len(self.X_test), metrics
+
+    def generate_local_recommendations_with_explanations(self):
+        top_k = 1
+        random_index = np.random.choice(len(self.X_explain))
+        random_user = self.X_explain.iloc[random_index:random_index+1]
+
+        results = generate_recommendations_with_explanations(
+            X_explain=self.X_explain, 
+            model=self.model, 
+            mappings=self.mappings,
+            top_k=top_k,
+            user_index=random_index,
+            user_features=random_user, 
+            mode="fl", 
+            partition_id=self.partition_id
+        )
+
+        return results, random_index
+
 
 
 def client_fn(context: Context):
    
     partition_id = context.node_config["partition-id"]
     num_partitions = context.node_config["num-partitions"]
+    num_server_rounds = context.run_config["num-server-rounds"]
     # Load partition data
-    X_train, X_test, X_explain, y_train, y_test, y_explain = load_data(partition_id, num_partitions)
+    X_train, X_test, X_explain, y_train, y_test, y_explain, mappings = load_data(partition_id, num_partitions)
     epochs = context.run_config["local-epochs"]
     batch_size = context.run_config["batch-size"]
     verbose = context.run_config.get("verbose")
@@ -68,8 +99,8 @@ def client_fn(context: Context):
     net = load_model(input_shape=X_train.shape[1], num_classes=y_train.nunique())
     # Return Client instance
     return FlowerClient(
-        net, X_train, X_test, X_explain, y_train, y_test, y_explain, 
-        partition_id, epochs, batch_size, verbose
+        net, X_train, X_test, X_explain, y_train, y_test, y_explain, mappings,
+        partition_id, num_server_rounds, epochs, batch_size, verbose
     ).to_client()
 
 

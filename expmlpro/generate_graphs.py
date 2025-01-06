@@ -73,70 +73,6 @@ def plot_all_metrics_comparison(json1_path, json2_path, output_folder):
         plt.close()
 
 
-def plot_shap_explanations(shap_json, output_folder):
-    """
-    Generate and save SHAP explanation plots from the SHAP JSON file.
-
-    Args:
-        shap_json (dict): SHAP explanation JSON containing expected_value, shap_values, and feature_values.
-        output_folder (str): Path to the folder where plots will be saved.
-
-    Returns:
-        None
-    """
-    # print(shap_json)
-    # sys.exit()
-    shap_values = np.array(shap_json["shap_values"])
-    feature_values = shap_json["feature_values"]
-    feature_names = list(feature_values.keys())
-    expected_value = shap_json["expected_value"]
-
-    # Force plot visualization (bar plot representation)
-    plt.figure(figsize=(10, 6))
-    plt.barh(feature_names, shap_values[0], color="skyblue", alpha=0.8)
-    plt.axvline(0, color="black", linewidth=0.8)
-    plt.xlabel("SHAP Value", fontsize=12)
-    plt.ylabel("Feature", fontsize=12)
-    plt.title("SHAP Explanation: Feature Contributions", fontsize=14)
-    plt.tight_layout()
-
-    # Save the plot
-    shap_plot_path = os.path.join(output_folder, "shap_explanations.png")
-    plt.savefig(shap_plot_path)
-    plt.close()
-    print(f"SHAP explanations plot saved to {shap_plot_path}")
-
-def plot_lime_explanations(lime_json, output_folder):
-    """
-    Generate and save LIME explanation plots from the LIME JSON file.
-
-    Args:
-        lime_json (dict): LIME explanation JSON containing feature_importances and intercept.
-        output_folder (str): Path to the folder where plots will be saved.
-
-    Returns:
-        None
-    """
-    feature_importances = lime_json["feature_importances"]
-    features = [imp["feature"] for imp in feature_importances]
-    importance_values = [imp["importance"][1] for imp in feature_importances]  # Extract numeric values
-
-    # LIME feature importance bar plot
-    plt.figure(figsize=(10, 6))
-    plt.barh(features, importance_values, color="salmon", alpha=0.8)
-    plt.axvline(0, color="black", linewidth=0.8)
-    plt.xlabel("LIME Importance", fontsize=12)
-    plt.ylabel("Feature", fontsize=12)
-    plt.title("LIME Explanation: Feature Contributions", fontsize=14)
-    plt.tight_layout()
-
-    # Save the plot
-    lime_plot_path = os.path.join(output_folder, "lime_explanations.png")
-    plt.savefig(lime_plot_path)
-    plt.close()
-    print(f"LIME explanations plot saved to {lime_plot_path}")
-
-
 def generate_combined_evaluation_graphs(num_clients, results_dir="../results/fl/evaluations", plots_dir="../results/plots/evaluations"):
     """
     Generate and save graphs for each metric, showing all clients' metrics and global metrics across rounds.
@@ -198,7 +134,6 @@ def generate_combined_evaluation_graphs(num_clients, results_dir="../results/fl/
 
         print(f"Saved plot: {plot_path}")
 
-
 def main():
 
     # Plot the comparison of ML and FL 
@@ -208,25 +143,31 @@ def main():
     plot_all_metrics_comparison(json1_path, json2_path, output_folder)
 
     ###############################################
-    # Plot the comparison of local and blobal evaluations FL     
+    Plot the comparison of local and blobal evaluations FL     
     num_clients = 10
     generate_combined_evaluation_graphs(num_clients)
 
     ###############################################
-    json1_path = "../results/ml/explanations/shap/explanations_for_user_236_recommendations.json"  # Metrics of FL rounds
-    json2_path = "../results/ml/explanations/lime/explanations_for_user_236_recommendations.json"
+    json1_path = "../results/ml/explanations/shap/explanations_for_user_204_recommendations.json"  # Metrics of FL rounds
+    json2_path = "../results/ml/explanations/lime/explanations_for_user_204_recommendations.json"
 
     # Load JSON data
-    shap_json = load_json(json1_path)
     lime_json = load_json(json2_path)
+    shap_json = load_json(json1_path)
 
     # Create the output folder if it doesn't exist
     output_folder = "../results/plots/explanations"
     os.makedirs(output_folder, exist_ok=True)
 
-    # plot_shap_explanations(shap_json, output_folder)
+    # plot_shap_explanations(json1_path, output_folder)
     plot_lime_explanations(lime_json, output_folder)
+    plot_lime_pie_chart(lime_json, output_folder)
+    plot_lime_bar_chart(lime_json, output_folder)
+    plot_lime_pos_neg_contributions(lime_json, output_folder)
+    plot_lime_cumulative_contributions(lime_json, output_folder)
 
+    # plot_shap_bar_chart(shap_json, output_folder)
+    # plot_shap_waterfall(shap_json, output_folder)
 
 # Run the script
 if __name__ == "__main__":

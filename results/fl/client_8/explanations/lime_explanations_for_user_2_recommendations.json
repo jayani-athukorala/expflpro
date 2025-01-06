@@ -1,0 +1,34 @@
+{
+    "feature_importances": [
+        {
+            "feature": "BMI <= 0.40",
+            "importance": 0.03292685853743427
+        },
+        {
+            "feature": "Weight <= 0.23",
+            "importance": 0.0313771501383739
+        },
+        {
+            "feature": "Height <= 0.48",
+            "importance": -0.01339346084469441
+        },
+        {
+            "feature": "0.00 < Gender <= 1.00",
+            "importance": -0.0018439174079408593
+        },
+        {
+            "feature": "Age <= 0.33",
+            "importance": 0.0015686930547852817
+        }
+    ],
+    "intercept": {
+        "1": -0.004416541239787228
+    },
+    "feature_values": {
+        "Weight": 93.48283639938684,
+        "Height": 1.966310964362876,
+        "BMI": 24.178395606785703,
+        "Age": 54,
+        "Gender": "Male"
+    }
+}

@@ -1,61 +1,88 @@
 import shap
 import numpy as np
 from lime.lime_tabular import LimeTabularExplainer
+from sklearn.preprocessing import MinMaxScaler
 
-def generate_shap_explanations(model, X_train, user_features):
+def generate_shap_explanations(model, scaler, mappings, X_explain, user_features):
     """
     Generate SHAP explanations for a random user.
 
     Args:
         model (tf.keras.Model): Trained model.
-        X_train (pd.DataFrame): Training dataset for SHAP initialization.
+        scaler (MinMaxScaler): Fitted scaler for normalization.
+        mappings (dict): Dictionary mapping encoded values to their original labels.
+        X_explain (pd.DataFrame): Training dataset for SHAP initialization.
         user_features (pd.DataFrame): Features of the selected user.
 
     Returns:
         dict: SHAP explanations as JSON.
     """
+    # Ensure user_features is a copy to avoid SettingWithCopyWarning
+    user_features = user_features.copy()
     # Use a representative subset for the background
-    background_data = shap.sample(X_train, 100)
+    background_data = shap.sample(X_explain, 100)
+
+    # Normalize user features
+    user_features_normalized = user_features.copy()
+    user_features_normalized[['Weight', 'Height', 'BMI', 'Age']] = scaler.transform(
+        user_features[['Weight', 'Height', 'BMI', 'Age']]
+    )
 
     explainer = shap.KernelExplainer(
         lambda x: model.predict({'User_Features': x}),
-        background_data
+        background_data,
+        l1_reg="num_features(10)"
     )
-    shap_values = explainer.shap_values(user_features)[0]  # Extract for the first class
+    shap_values = explainer.shap_values(user_features_normalized)[0]
+
+    # Denormalize Gender
+    reverse_gender_mapping = {v: k for k, v in mappings['Gender'].items()}
+    user_features['Gender'] = user_features['Gender'].map(reverse_gender_mapping)
 
     # Convert SHAP explanations to JSON
     explanations = {
         "expected_value": explainer.expected_value[0],
         "shap_values": shap_values.tolist(),
-        "feature_values": user_features.iloc[0].to_dict()
+        "feature_values": user_features.iloc[0].to_dict()  # Use unnormalized values
     }
     return explanations
 
-
-def generate_lime_explanations(model, X_train, user_features):
+def generate_lime_explanations(model, scaler, mappings, X_explain, user_features):
     """
     Generate LIME explanations for a random user.
 
     Args:
         model (tf.keras.Model): Trained model.
-        X_train (pd.DataFrame): Training dataset for LIME initialization.
+        scaler (MinMaxScaler): Fitted scaler for normalization.
+        mappings (dict): Dictionary mapping encoded values to their original labels.
+        X_explain (pd.DataFrame): Training dataset for LIME initialization.
         user_features (pd.DataFrame): Features of the selected user.
 
     Returns:
         dict: LIME explanations as JSON.
     """
-    # Use a subset of the training data
+    user_features = user_features.copy()
+    # Normalize user features
+    user_features_normalized = user_features.copy()
+    user_features_normalized[['Weight', 'Height', 'BMI', 'Age']] = scaler.transform(
+        user_features[['Weight', 'Height', 'BMI', 'Age']]
+    )
+
     lime_explainer = LimeTabularExplainer(
-        training_data=X_train.sample(500).values,
-        feature_names=X_train.columns,
+        training_data=X_explain.values,
+        feature_names=X_explain.columns,
         mode='classification'
     )
 
     # Explain the prediction for the random user
     lime_exp = lime_explainer.explain_instance(
-        user_features.iloc[0].values,  # Single user input
+        user_features_normalized.iloc[0].values,
         lambda x: model.predict({'User_Features': x})
     )
+
+    # Denormalize Gender
+    reverse_gender_mapping = {v: k for k, v in mappings['Gender'].items()}
+    user_features['Gender'] = user_features['Gender'].map(reverse_gender_mapping)
 
     # Convert LIME explanations to JSON
     lime_explanations = {
@@ -63,9 +90,11 @@ def generate_lime_explanations(model, X_train, user_features):
             {"feature": imp[0], "importance": imp[1]}
             for imp in lime_exp.as_list()
         ],
-        "intercept": lime_exp.intercept
+        "intercept": lime_exp.intercept,
+        "feature_values": user_features.iloc[0].to_dict()  # Use unnormalized values
     }
     return lime_explanations
+
 
 def generate_shap_explanations_for_all(model, X_explain, k=1):
     """
@@ -93,7 +122,6 @@ def generate_shap_explanations_for_all(model, X_explain, k=1):
     
     return shap_explanations
 
-from lime.lime_tabular import LimeTabularExplainer
 
 def generate_lime_explanations_for_all(model, X_explain, feature_names, k=1):
     """

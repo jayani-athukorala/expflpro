@@ -29,19 +29,24 @@ def load_data(partition_id: int, num_partitions: int, dataset_path="data"):
     partition = fds.load_partition(partition_id, "train")
     partition_data = pd.DataFrame(partition)
 
-    X_train, X_test, X_explain, y_train, y_test, y_explain = prepare_data_fl(partition_data)
-    return X_train, X_test, X_explain, y_train, y_test, y_explain
+    X_train, X_test, X_explain, y_train, y_test, y_explain, mappings = prepare_data_fl(partition_data)
+    return X_train, X_test, X_explain, y_train, y_test, y_explain, mappings
 
 # Prepare data for FL environment
 def prepare_data_fl(data):
     """Preprocess the dataset: encode, normalize, and split."""
-    
+    mappings = {}
+   
     # Encode categorical features
     le_gender = LabelEncoder()
     data['Gender'] = le_gender.fit_transform(data['Gender'])  # Male: 1, Female: 0
+    mappings['Gender'] = dict(zip(le_gender.classes_, le_gender.transform(le_gender.classes_)))
     
     le_bmicase = LabelEncoder()
     data['BMIcase'] = le_bmicase.fit_transform(data['BMIcase'])
+
+    # Save unnormalized data for explanations
+    explanation_data = data.copy()
 
     # Normalize numerical features
     scaler = MinMaxScaler()
@@ -58,18 +63,27 @@ def prepare_data_fl(data):
     X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=0.3, random_state=42)
     X_test, X_explain, y_test, y_explain = train_test_split(X_temp, y_temp, test_size=0.333, random_state=42)
 
-    return X_train, X_test, X_explain, y_train, y_test, y_explain
+    # Keep explanation set unnormalized
+    X_explain = explanation_data.iloc[X_explain.index][features]
+
+    return X_train, X_test, X_explain, y_train, y_test, y_explain, mappings
 
 # Prepare data for centralized environment
 def prepare_data(data):
     """Preprocess the dataset: encode, normalize, and split."""
     
+    mappings = {}
+   
     # Encode categorical features
     le_gender = LabelEncoder()
     data['Gender'] = le_gender.fit_transform(data['Gender'])  # Male: 1, Female: 0
+    mappings['Gender'] = dict(zip(le_gender.classes_, le_gender.transform(le_gender.classes_)))
     
     le_bmicase = LabelEncoder()
     data['BMIcase'] = le_bmicase.fit_transform(data['BMIcase'])
+
+    # Save unnormalized data for explanations
+    explanation_data = data.copy()
 
     # Normalize numerical features
     scaler = MinMaxScaler()
@@ -86,4 +100,7 @@ def prepare_data(data):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     _, X_explain, _, y_explain = train_test_split(X_test, y_test, test_size=0.5, random_state=42)
 
-    return X_train, X_test, X_explain, y_train, y_test, y_explain
+    # Keep explanation set unnormalized
+    X_explain = explanation_data.iloc[X_explain.index][features]
+
+    return X_train, X_test, X_explain, y_train, y_test, y_explain, mappings

@@ -1,18 +1,16 @@
-# expflpro: A Flower / TensorFlow app
+# Explainable Federated Learning Project (expflpro: A Flower / TensorFlow app)
 
-# Explainable Federated Learning Project
-
-This project implements personalized explainable federated learning for fitness data. Below is the structure of the project and instructions on how to set up the environment.
+This project implements personalized explainable federated learning for exercise plan recommendation. Below is the structure of the project and instructions on how to set up the environment.
 
 ## Project Structure
 
 The repository is organized as follows to support the implementation of personalized explainable federated learning for fitness recommendation:
 .
-├── expmlpro/                   # Centralized Machine Learning (ML) for Workout Recommendation
-│   └── README.md               # Documentation for the ml-pro module
+├── expmlpro/                   # Centralized Machine Learning (ML) for Workout plan recommendation
+│ 
 │
 ├── expflpro/                   # Federated Learning (FL) for Workout Recommendation
-│   └── README.md               # Documentation for the fl-pro module
+│   
 |               
 ├── data/                       # Dataset
 |  
@@ -43,7 +41,7 @@ conda env export > environment.yml # Save environment configuration for reproduc
 conda env create -f environment.yml # Recreate the environment
 ```
 
-### 4. Run the application
+## Run the application
 
 ```sh
 flwr run . # Run federated learning
@@ -53,7 +51,7 @@ python graph.py # Generate related graphs for results analysis
 ```
 
 
-### 5. Deactivate the Environment
+## Deactivate the Environment
 
 ```sh
 conda deactivate

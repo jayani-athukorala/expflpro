@@ -1,0 +1,16 @@
+{
+    "computation": {
+        "recommendation": {
+            "Computation Time (s)": 0.44770002365112305,
+            "Memory Usage (MB)": 0.125
+        },
+        "shap": {
+            "Computation Time (s)": 1.0810363292694092,
+            "Memory Usage (MB)": 0.125
+        },
+        "lime": {
+            "Computation Time (s)": 1.0627765655517578,
+            "Memory Usage (MB)": 0.5
+        }
+    }
+}

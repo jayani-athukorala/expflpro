@@ -2,27 +2,27 @@
     "feature_importances": [
         {
             "feature": "BMI <= 0.34",
-            "importance": 0.05665617457945473
+            "importance": 0.03906497381808536
         },
         {
             "feature": "Weight <= 0.23",
-            "importance": 0.04075401410907969
+            "importance": 0.030745346964459103
         },
         {
             "feature": "Height <= 0.53",
-            "importance": -0.01574753350980842
-        },
-        {
-            "feature": "Age <= 0.26",
-            "importance": 0.0035984870304098834
+            "importance": -0.014723855226175586
         },
         {
             "feature": "0.00 < Gender <= 1.00",
-            "importance": -0.0007583208136704988
+            "importance": 0.0004985093113269234
+        },
+        {
+            "feature": "Age <= 0.26",
+            "importance": 0.00011487056852073041
         }
     ],
     "intercept": {
-        "1": -0.006483836309963992
+        "1": -0.004011245316218031
     },
     "feature_values": {
         "Weight": 70.0,

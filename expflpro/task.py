@@ -1,5 +1,7 @@
 """expflpro: A Flower / TensorFlow app."""
 import os
+import time
+from memory_profiler import memory_usage
 from sklearn.metrics import (
     accuracy_score,
     precision_score,
@@ -128,6 +130,44 @@ def recommend_exercise_plans_for_all(model, X_explain, k=1):
     
     return top_k_recommendations
 
+def measure_time(func, *args, **kwargs):
+    """
+    Helper function to measure execution time of a function.
+
+    Parameters:
+    - func: The function to measure.
+    - args, kwargs: Arguments to pass to the function.
+
+    Returns:
+    - result: The output of the function.
+    - duration: Time taken to execute the function (in seconds).
+    """
+    start_time = time.time()
+    result = func(*args, **kwargs)
+    end_time = time.time()
+    return result, end_time - start_time
+
+def measure_computation_overhead(xai_function, *args, **kwargs):
+    """
+    Measure computation time and memory overhead for an XAI method.
+
+    Args:
+        xai_function (callable): Function that generates explanations.
+        *args: Arguments for the function.
+        **kwargs: Keyword arguments for the function.
+
+    Returns:
+        dict: Computation time and memory usage metrics.
+    """
+    start_time = time.time()
+    mem_usage = memory_usage((xai_function, args, kwargs), interval=0.1)
+    end_time = time.time()
+
+    return {
+        "Computation Time (s)": end_time - start_time,
+        "Memory Usage (MB)": max(mem_usage) - min(mem_usage)
+    }
+    
 def generate_recommendations_with_explanations(X_explain, model, mappings, user_index, user_features, top_k, mode="fl", partition_id=None):
     """
     Generate recommendations and explanations for both ML and FL implementations.
@@ -182,6 +222,31 @@ def generate_recommendations_with_explanations(X_explain, model, mappings, user_
         lime_explanations, 
         os.path.join(base_dir, "explanations"), 
         f"lime_explanations_for_user_{user_index}_recommendations.json"
+    )
+
+    # Measure and save computation overheads
+    recommendation_computation = measure_computation_overhead(
+        recommend_exercise_plans, user_features, model, scaler, top_k
+    )
+    shap_computation = measure_computation_overhead(
+        generate_shap_explanations, model, scaler, mappings, X_explain, user_features
+    )
+    lime_computation = measure_computation_overhead(
+        generate_lime_explanations, model, scaler, mappings, X_explain, user_features
+    )
+
+    overheads = {
+        "computation": {
+            "recommendation": recommendation_computation,
+            "shap": shap_computation,
+            "lime": lime_computation
+        }
+    }
+
+    save_list_as_json(
+        overheads,
+        os.path.join(base_dir, "overheads"),
+        f"overhead_for_user_{user_index}_recommendation_explanations.json"
     )
 
     # Return the generated data

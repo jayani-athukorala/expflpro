@@ -5,19 +5,17 @@ This project implements personalized explainable federated learning for exercise
 ## Project Structure
 
 The repository is organized as follows to support the implementation of personalized explainable federated learning for fitness recommendation:
-.
-├── expmlpro/                   # Centralized Machine Learning (ML) for Workout plan recommendation
-│ 
-│
+
+```
+├── expmlpro/                   # Centralized Machine Learning (ML) for Workout Plan Recommendation
 ├── expflpro/                   # Federated Learning (FL) for Workout Recommendation
-│   
-|               
-├── data/                       # Dataset
-|  
-├── results/            
-│
-├── README.md                   # Overview and documentation of the entire project
-└── requirements.txt            # Dependencies for the project
+├── fl_model/                   # Saved Trained global FL model
+├── ml_model/                   # Saved Trained centralized model
+├── data/                       # Dataset storage (training and testing data)
+├── results/                    # Stores model results, logs, and evaluation metrics
+├── README.md                   # Project documentation and guidelines
+└── requirements.txt            # Dependencies and package requirements
+```
 
 ## Setting Up the Environment
 
@@ -28,6 +26,8 @@ git clone git@github.com:jayani-athukorala/expflpro.git
 ```
 ### 2. Install and activate conda environment
 ```sh
+# conda list #View the list of packages available on conda
+# conda info --envs #View the list of conda environments
 conda create -n fedenv python=3.10
 conda activate fedenv
 
@@ -37,8 +37,8 @@ conda activate fedenv
 ```sh
 pip install -e .
 pip install -r requirements.txt
-conda env export > environment.yml # Save environment configuration for reproducibility
-conda env create -f environment.yml # Recreate the environment
+# conda env export > environment.yml # Save environment configuration for reproducibility
+# conda env create -f environment.yml # Recreate the environment
 ```
 
 ## Run the application
@@ -47,7 +47,8 @@ conda env create -f environment.yml # Recreate the environment
 flwr run . # Run federated learning
 cd expmlpro
 python centralized.py # Run centrailzed part
-python graph.py # Generate related graphs for results analysis
+python generate_graphs.py # Generate related graphs for results analysis
+python generate_evaluations.py # Generate related graphs for explanation evaluations
 ```
 
 
@@ -55,4 +56,6 @@ python graph.py # Generate related graphs for results analysis
 
 ```sh
 conda deactivate
+# conda remove --name fedenv --all # Remove the fedenv conda environment
+# conda clean --all # Cleanup unused dependencies
 ```

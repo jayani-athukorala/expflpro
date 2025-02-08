@@ -10,7 +10,7 @@ from expflpro.graph import generate_recommendation_graphs
 from expflpro.task import generate_evaluation_metrics, generate_recommendations_with_explanations, recommend_exercise_plans_for_all
 
 FINAL_MODEL_DIR = "../ml_model"
-FINAL_MODEL_FILENAME = "final_model.h5"
+FINAL_MODEL_FILENAME = "final_model.keras"
 
 # Main script to orchestrate the centralized recommendation system
 def main():
@@ -38,9 +38,14 @@ def main():
 
     # Save the trained model
     os.makedirs(FINAL_MODEL_DIR, exist_ok=True)
+
+    # Specify the file path (use .keras for clarity)
     final_model_path = os.path.join(FINAL_MODEL_DIR, FINAL_MODEL_FILENAME)
+
+    # Save the model; Keras will infer the format from the extension
     model.save(final_model_path)
     print(f"Final ML model saved to: {final_model_path}")
+
 
     # Evaluate the model
     loss, accuracy = model.evaluate({'User_Features': X_test}, y_test, verbose=0)
@@ -86,7 +91,7 @@ def main():
     recommendations_with_explanations = generate_recommendations_with_explanations(
         X_explain, model, mappings, 0, new_user_df, top_k=1, mode="ml"
     )
-    print("Recommendations for the new user Using ML model:", recommendations_with_explanations)
+    print("Recommendations for the new user Using ML model:", json.dumps(recommendations_with_explanations, indent=4))
     # Generate explanations
     generate_recommendation_graphs(recommendations_with_explanations, output_folder, user_index=0)
 

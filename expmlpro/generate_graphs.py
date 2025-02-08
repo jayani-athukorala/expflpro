@@ -143,7 +143,7 @@ def main():
     plot_all_metrics_comparison(json1_path, json2_path, output_folder)
 
     ###############################################
-    Plot the comparison of local and blobal evaluations FL     
+    # Plot the comparison of local and blobal evaluations FL     
     num_clients = 10
     generate_combined_evaluation_graphs(num_clients)
 

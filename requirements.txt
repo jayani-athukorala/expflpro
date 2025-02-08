@@ -1,4 +1,4 @@
-flwr
 scikit-learn
 shap
 lime
+memory-profiler

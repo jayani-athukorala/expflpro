@@ -30,7 +30,7 @@ def plot_shap_explanations(shap_json, output_folder, user_index):
 
     # Force plot visualization (bar plot representation)
     plt.figure(figsize=(10, 6))
-    plt.barh(feature_names, shap_values, color="skyblue", alpha=0.8)
+    plt.barh(feature_names, shap_values, color="royalblue", alpha=0.8)
     plt.axvline(0, color="black", linewidth=0.8)
     plt.title(f"SHAP Explanation for User {user_index}")
     plt.xlabel("Mean Absolute SHAP Value")
@@ -42,22 +42,36 @@ def plot_shap_explanations(shap_json, output_folder, user_index):
 
 # Function to generate and save LIME explanation graphs
 def plot_lime_explanations(lime_json, output_folder, user_index):
-    # Extract data
-    feature_importances = lime_json['feature_importances']
-    feature_values = lime_json['feature_values']
-    
-    features = [item['feature'] for item in feature_importances]
-    importances = [item['importance'] for item in feature_importances]
-    
-    # Create a plot for LIME feature importances
+    """
+    Generate and save LIME explanation plots as horizontal bar plots.
+
+    Args:
+        lime_json (dict): Dictionary containing LIME explanation data.
+        output_folder (str): Path to the folder where plots will be saved.
+        user_index (int): Index of the user for labeling the plot.
+
+    Returns:
+        None
+    """
+    # Extract feature names and their importances
+    feature_importances = lime_json["feature_importances"]
+    features = [item["feature"] for item in feature_importances]
+    importances = [item["importance"] for item in feature_importances]
+
+    # Create a horizontal bar plot for LIME feature importances
     plt.figure(figsize=(10, 6))
-    sns.barplot(x=importances, y=features)
+    plt.barh(features, importances, color="tomato", alpha=0.8)  # Use tomato color
+    plt.axvline(0, color="black", linewidth=0.8)  # Add a vertical reference line at 0
     plt.title(f"LIME Explanation for User {user_index}")
     plt.xlabel("Feature Importance")
     plt.ylabel("Features")
     plt.tight_layout()
+
+    # Save the plot to the specified output folder
     plt.savefig(os.path.join(output_folder, f"lime_explanation_user_{user_index}.png"))
     plt.close()
+    print(f"LIME explanations plot saved to {output_folder}")
+
 
 # Function to generate personalized recommendation graphs
 def generate_recommendation_graphs(results, output_folder, user_index):

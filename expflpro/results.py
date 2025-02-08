@@ -111,7 +111,7 @@ def reset_results_folder(results_folder="results"):
     print(f"Results folder reset: {results_folder}")
 
 
-# Save a list as a JSON file
+
 def save_list_as_json(data, output_folder, filename, partition_id=None):
     """
     Save a list of data as a JSON file in the specified output folder.
@@ -139,12 +139,13 @@ def save_list_as_json(data, output_folder, filename, partition_id=None):
     # Construct the full path for the output file
     output_file_path = os.path.join(output_folder, filename)
 
-    # Save the data as a JSON file
-    with open(output_file_path, 'w') as json_file:
+    # Save the data as a JSON file with UTF-8 encoding
+    with open(output_file_path, 'w', encoding='utf-8') as json_file:
         json.dump(data, json_file, indent=4)
 
     print(f"File saved successfully at {output_file_path}")
     return output_file_path  # Return the file path for reference
+
 
 def save_list_as_csv(data, output_folder, filename, partition_id=None):
     """
